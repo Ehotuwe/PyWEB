@@ -11,36 +11,20 @@ from .models import Notebook
 
 class UserSerializer(serializers.ModelSerializer):
     """ Автор заметки """
+    date_joined = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", required=False, read_only=True)
 
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'date_joined')
 
-    def to_representation(self, instance):
-        """ Переопределение вывода. Меняем формат даты в ответе """
-        ret = super().to_representation(instance)
-        # Конвертируем строку в дату по формату
-        date_joined = datetime.strptime(ret['date_joined'], '%Y-%m-%dT%H:%M:%S.%f')
-        # Конвертируем дату в строку в новом формате
-        ret['date_joined'] = date_joined.strftime('%d %B %Y %H:%M:%S')
-        return ret
-
 
 class NotebookListSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(slug_field='username', read_only=True)
+    date_add = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", required=False, read_only=True)
 
     class Meta:
         model = Notebook
         fields = "__all__"
-
-    def to_representation(self, instance):
-        """ Переопределение вывода. Меняем формат даты в ответе """
-        ret = super().to_representation(instance)
-        # Конвертируем строку в дату по формату
-        date_add = datetime.strptime(ret['date_add'], '%Y-%m-%dT%H:%M:%S.%f')
-        # Конвертируем дату в строку в новом формате
-        ret['date_add'] = date_add.strftime('%d %B %Y %H:%M:%S')
-        return ret
 
 
 class FilterSerializer(Serializer):
@@ -51,17 +35,9 @@ class FilterSerializer(Serializer):
 
 class NoteIdSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    date_joined = serializers.DateTimeField(format="%Y-%m-%dT%H:%M:%S", required=False, read_only=True)
 
     class Meta:
         model = Notebook
         exclude = ('public',)
         read_only_fields = ['date_add', 'user', ]
-
-    def to_representation(self, instance):
-        """ Переопределение вывода. Меняем формат даты в ответе """
-        ret = super().to_representation(instance)
-        # Конвертируем строку в дату по формату
-        date_add = datetime.strptime(ret['date_add'], '%Y-%m-%dT%H:%M:%S.%f')
-        # Конвертируем дату в строку в новом формате
-        ret['date_add'] = date_add.strftime('%d %B %Y %H:%M:%S')
-        return ret

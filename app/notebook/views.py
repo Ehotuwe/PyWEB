@@ -2,6 +2,7 @@ from django.db.models import Q
 from django.shortcuts import render
 
 # Create your views here.
+from django.views import View
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
@@ -10,7 +11,8 @@ from rest_framework.views import APIView
 
 from .models import Notebook
 from .serializers import NotebookListSerializer, NoteIdSerializer, FilterSerializer
-from app.app.settings_local import version
+
+from app import settings_local
 
 
 class NotesView(APIView):
@@ -29,7 +31,6 @@ class NotesView(APIView):
         if filter_params.data.get('activity'):
 
             for ac in filter_params.data['activity']:
-                print(ac)
                 q_filter |= Q(activity=ac)
         # if filter_params.data.get('important') or not filter_params.data.get('important'):
         if 'important' in filter_params.data:
@@ -84,15 +85,40 @@ class NoteView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AboutView(APIView):
-    version = version
+class NotesUserView(APIView):
+    permission_classes = (IsAuthenticated,)
 
-    def about(self, request):
+    def get(self, request):
+        notes = Notebook.objects.filter(user=request.user).order_by('date_add', '-important')
+        filter_params = FilterSerializer(data=request.query_params)
+
+        if not filter_params.is_valid():
+            return Response(filter_params.errors, status=status.HTTP_400_BAD_REQUEST)
+        q_filter = Q()
+        if filter_params.data.get('activity'):
+
+            for ac in filter_params.data['activity']:
+                q_filter |= Q(activity=ac)
+        # if filter_params.data.get('important') or not filter_params.data.get('important'):
+        if 'important' in filter_params.data:
+            q_filter &= Q(important=filter_params.data.get('important'))
+        if 'public' in filter_params.data:
+            q_filter &= Q(important=filter_params.data.get('public'))
+        notes = notes.filter(q_filter)
+
+        serializer = NotebookListSerializer(notes, many=True)
+
+        return Response(serializer.data)
+
+
+class AboutView(View):
+
+    def get(self, request):
         user = request.user
         context = {
-            'version': version,
+            'server_version': settings_local.VERSION,
             'user': user
-            # Передайте значение conclusion в шаблон
+
         }
 
         return render(request, 'about.html', context)
